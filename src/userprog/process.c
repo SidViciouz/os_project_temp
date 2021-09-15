@@ -1,4 +1,4 @@
-#include "userprog/process.h"
+#include "userprog/process.h" 
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
@@ -20,7 +20,7 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-
+static void push_argument(int argc, char* argv[],void **esp);
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -53,7 +53,6 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -86,8 +85,9 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
+  while(1);
   return -1;
 }
 
@@ -221,6 +221,27 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
+  /* where my Code starts */
+  int argc;
+  char* argv[4];
+  char* pret;
+  char* pnext;
+  char* fname = (char*)file_name;
+
+  pret = strtok_r(fname," ",&pnext);
+  argc++;
+  argv[0] = pret;
+  i = 1;
+
+  while(pret){
+	  pret = strtok_r(NULL," ",&pnext);
+	  if(pret != NULL){
+	  	argv[i++] = pret;
+	  	argc++;
+	  }
+  }
+  /* where my Code ends */
+
   /* Open executable file. */
   file = filesys_open (file_name);
   if (file == NULL) 
@@ -304,6 +325,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
+
+  push_argument(argc,argv,esp);
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -462,4 +485,37 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+void push_argument(int argc, char* argv[], void** esp)
+{
+  int word_length = 0;
+  int align;
+  void* argv_addr[argc];
+  void* argv_p_addr;
+
+  for(int i=argc-1; i>=0; i--){
+	int length = strlen(argv[i])+1;
+	*esp -= length;
+	word_length += length;
+	strlcpy(*esp,argv[i],length);
+	argv_addr[i] = *esp;
+  } 
+
+  align = 4 - word_length%4;
+  *esp -= align + 4; //word-align + NULL
+
+  for(int i=argc-1; i>=0 ; i--){
+  	*esp -= 4;
+	**(int**)esp = argv_addr[i];
+  }
+  argv_p_addr = *esp;
+  *esp -= 4;
+  **(int**)esp = argv_p_addr;
+
+  *esp -= 4;
+  **(int**)esp = argc;
+
+  *esp -= 4;
+  
 }

@@ -13,8 +13,11 @@ syscall_init (void)
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
+  printf("@@@ f->esp : %08X @@@\n",*((char*)(f->esp)));
+  f->esp += 4;
+  printf("@@@ f->esp : %08X @@@\n",*((char*)(f->esp)));
   printf ("system call!\n");
   thread_exit ();
 }
