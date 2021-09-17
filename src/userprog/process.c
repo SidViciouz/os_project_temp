@@ -87,7 +87,10 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  while(1);
+  struct thread *t;
+  while((t = thread_current())->tid != child_tid){
+	  printf("[%d,%d]",t->tid,child_tid);
+  }
   return -1;
 }
 
@@ -222,7 +225,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* where my Code starts */
-  int argc;
+  int argc = 0;
   char* argv[4];
   char* pret;
   char* pnext;
@@ -507,11 +510,11 @@ void push_argument(int argc, char* argv[], void** esp)
 
   for(int i=argc-1; i>=0 ; i--){
   	*esp -= 4;
-	**(int**)esp = argv_addr[i];
+	**(int**)esp = (int)argv_addr[i];
   }
   argv_p_addr = *esp;
   *esp -= 4;
-  **(int**)esp = argv_p_addr;
+  **(int**)esp = (int)argv_p_addr;
 
   *esp -= 4;
   **(int**)esp = argc;

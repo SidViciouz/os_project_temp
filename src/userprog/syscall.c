@@ -15,9 +15,23 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  printf("@@@ f->esp : %08X @@@\n",*((char*)(f->esp)));
-  f->esp += 4;
-  printf("@@@ f->esp : %08X @@@\n",*((char*)(f->esp)));
+  int syscall_no = *(int*)(f->esp);
+  if(syscall_no == SYS_EXIT){
+	thread_exit();
+	f->eax = *(int*)(f->esp + 4);
+	printf("SYS_EXIT!\n");
+  }
+  else if(syscall_no == SYS_WRITE){
+	unsigned size = *(unsigned*)( f->esp + 12);
+	int buffer = *(int*)(f->esp + 8);
+	int fd = *(int*)(f->esp + 4);
+
+	if(fd == 1){
+		putbuf((const char*)buffer,size);
+	}
+	
+	printf("SYS_WRITE!\n");	
+  }
   printf ("system call!\n");
   thread_exit ();
 }
