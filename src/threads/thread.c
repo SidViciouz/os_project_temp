@@ -108,7 +108,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  thread_create ("idle", PRI_MIN, idle, &idle_started);
+  thread_create ("idle", PRI_MIN, idle, &idle_started); //여기에서 자식 프로세스를 추가해준다.
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -467,6 +467,10 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+
+  sema_init(&(t->parent_sema),0);
+  list_init(&(t->child_list));
+  list_push_back(&(running_thread()->child_list),&(t->child_elem));
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

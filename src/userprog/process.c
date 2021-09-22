@@ -87,10 +87,15 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  struct thread *t;
-  while((t = thread_current())->tid != child_tid){
-	  printf("[%d,%d]",t->tid,child_tid);
-  }
+  struct thread *temp = NULL;
+  struct list_elem *element;
+
+  for(element = list_begin(&(thread_current()->child_list)); element != list_end(&(thread_current()->child_list)); element = list_next(element))
+	  if((temp = list_entry(element,struct thread,child_elem))->tid == child_tid){
+		  sema_down(&(temp->parent_sema));
+		  //list_remove(element);
+		  return temp->exit_number;
+	  }
   return -1;
 }
 
@@ -117,6 +122,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  sema_up(&(cur->parent_sema));
 }
 
 /* Sets up the CPU for running user code in the current
@@ -243,6 +249,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	  	argc++;
 	  }
   }
+  strlcpy(t->name,fname,sizeof(t->name)); 
   /* where my Code ends */
 
   /* Open executable file. */
@@ -260,7 +267,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
       || ehdr.e_machine != 3
       || ehdr.e_version != 1
       || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
-      || ehdr.e_phnum > 1024) 
+      || ehdr.e_phnum > 1024)
+       
     {
       printf ("load: %s: error loading executable\n", file_name);
       goto done; 
@@ -497,6 +505,7 @@ void push_argument(int argc, char* argv[], void** esp)
   void* argv_addr[argc];
   void* argv_p_addr;
 
+  //argument push
   for(int i=argc-1; i>=0; i--){
 	int length = strlen(argv[i])+1;
 	*esp -= length;
@@ -504,10 +513,11 @@ void push_argument(int argc, char* argv[], void** esp)
 	strlcpy(*esp,argv[i],length);
 	argv_addr[i] = *esp;
   } 
-
+  
   align = 4 - word_length%4;
   *esp -= align + 4; //word-align + NULL
 
+  //argument address push
   for(int i=argc-1; i>=0 ; i--){
   	*esp -= 4;
 	**(int**)esp = (int)argv_addr[i];
@@ -520,5 +530,4 @@ void push_argument(int argc, char* argv[], void** esp)
   **(int**)esp = argc;
 
   *esp -= 4;
-  
 }

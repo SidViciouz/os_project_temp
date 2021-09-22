@@ -3,6 +3,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include "synch.h"
 #include <stdint.h>
 
 /* States in a thread's life cycle. */
@@ -93,9 +94,14 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-#ifdef USERPROG
+#ifdef USERPROG    
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+    /* code about chlid process (i added)*/
+    int exit_number;
+    struct list child_list;
+    struct list_elem child_elem;
+    struct semaphore parent_sema;
 #endif
 
     /* Owned by thread.c. */
