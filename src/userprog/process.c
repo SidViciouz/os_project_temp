@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -41,7 +42,8 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (fn_copy);
+
   return tid;
 }
 
@@ -89,12 +91,15 @@ process_wait (tid_t child_tid)
 {
   struct thread *temp = NULL;
   struct list_elem *element;
+  int exit_number;
 
   for(element = list_begin(&(thread_current()->child_list)); element != list_end(&(thread_current()->child_list)); element = list_next(element))
 	  if((temp = list_entry(element,struct thread,child_elem))->tid == child_tid){
 		  sema_down(&(temp->parent_sema));
-		  //list_remove(element);
-		  return temp->exit_number;
+		  list_remove(&(temp->child_elem));
+		  exit_number = temp->exit_number;
+		  sema_up(&(temp->parent_sema2)); 
+		  return exit_number;
 	  }
   return -1;
 }
@@ -108,6 +113,8 @@ process_exit (void)
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+  sema_up(&(cur->parent_sema));
+  sema_down(&(cur->parent_sema2));
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -122,7 +129,6 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-  sema_up(&(cur->parent_sema));
 }
 
 /* Sets up the CPU for running user code in the current
@@ -232,28 +238,38 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* where my Code starts */
   int argc = 0;
-  char* argv[4];
+  char** argv;
   char* pret;
   char* pnext;
-  char* fname = (char*)file_name;
+  char fname[300];
 
+  strlcpy(fname,file_name,strlen(file_name)+1);
   pret = strtok_r(fname," ",&pnext);
   argc++;
-  argv[0] = pret;
   i = 1;
+  /* get argc to malloc */	
+  while(pret){ 
+	  pret = strtok_r(NULL," ",&pnext);
+	  if(pret != NULL)
+	  	argc++;
+  }
 
+  argv = (char**)malloc(sizeof(char*)*argc);
+
+  strlcpy(fname,file_name,strlen(file_name)+1);
+  pret = strtok_r(fname," ",&pnext);
+  argv[0] = pret;
   while(pret){
 	  pret = strtok_r(NULL," ",&pnext);
-	  if(pret != NULL){
-	  	argv[i++] = pret;
-	  	argc++;
-	  }
+	  if(pret != NULL)
+		  argv[i++] = pret;
   }
-  strlcpy(t->name,fname,sizeof(t->name)); 
+
+  strlcpy(t->name,argv[0],sizeof(t->name)); 
   /* where my Code ends */
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (argv[0]);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);

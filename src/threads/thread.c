@@ -469,6 +469,7 @@ init_thread (struct thread *t, const char *name, int priority)
   intr_set_level (old_level);
 
   sema_init(&(t->parent_sema),0);
+  sema_init(&(t->parent_sema2),0);
   list_init(&(t->child_list));
   list_push_back(&(running_thread()->child_list),&(t->child_elem));
 }

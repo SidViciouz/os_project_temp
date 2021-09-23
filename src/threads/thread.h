@@ -98,10 +98,11 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     /* code about chlid process (i added)*/
-    int exit_number;
+    uint32_t exit_number;
     struct list child_list;
     struct list_elem child_elem;
     struct semaphore parent_sema;
+    struct semaphore parent_sema2;
 #endif
 
     /* Owned by thread.c. */

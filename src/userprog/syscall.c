@@ -81,7 +81,7 @@ syscall_handler (struct intr_frame *f)
 void kernel_exit(int exit_number){
 
   thread_current()->exit_number = exit_number;
-  printf("%s: exit(%d)\n",thread_current()->name,thread_current()->exit_number);
+  printf("%s: exit(%d)\n",thread_current()->name,exit_number);
   thread_exit();
 
 }
