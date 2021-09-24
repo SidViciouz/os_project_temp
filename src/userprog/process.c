@@ -40,19 +40,21 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+/*
   name = palloc_get_page(0);
   strlcpy(name,file_name,PGSIZE);
   pret = strtok_r(name," ",&pnext);
   if(filesys_open(pret) == NULL)
 	return -1;
-
+*/
   /* Create a new thread to execute FILE_NAME. */
+  //printf("process_execute : [%s]\n",thread_current()->name);
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
- // sema_down(&(thread_current()->create_sema));
+  sema_down(&(thread_current()->create_sema));
+  //printf("thread_current() : [%s]\n",thread_current()->name);
 
-  //if(!thread_current()->create_success)
-//	  return -1;
+  if(!thread_current()->create_success)
+  	return -1;
 
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
@@ -71,26 +73,27 @@ start_process (void *file_name_)
   struct list_elem* element;
   struct thread* temp;
 
+  //printf("start_process : [%s]\n",thread_current()->name);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+
+  element = list_begin(&(thread_current()->parent_list));
+  temp = list_entry(element,struct thread,parent_elem);
+
   success = load (file_name, &if_.eip, &if_.esp);
 
+  sema_up(&(temp->create_sema));
   /* If load failed, quit. */
   palloc_free_page (file_name);
 
- // element = list_begin(&(thread_current()->parent_list));
- // temp = list_entry(element,struct thread,parent_elem);
-
   if (!success){
+    temp->create_success = false;
     thread_exit ();
-   // printf("[success is false]\n");
-    //temp->create_success = false;
   }
-
- // sema_up(&(temp->create_sema));
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
