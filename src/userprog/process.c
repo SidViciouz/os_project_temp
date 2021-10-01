@@ -40,10 +40,8 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  //printf("process_execute : [%s]\n",thread_current()->name);
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   sema_down(&(thread_current()->create_sema));
-  //printf("thread_current() : [%s]\n",thread_current()->name);
 
   if(!thread_current()->create_success)
   	return -1;
@@ -77,15 +75,19 @@ start_process (void *file_name_)
   temp = list_entry(element,struct thread,parent_elem);
 
   success = load (file_name, &if_.eip, &if_.esp);
-
-  sema_up(&(temp->create_sema));
   /* If load failed, quit. */
   palloc_free_page (file_name);
 
-  if (!success){
+  if(!success)
     temp->create_success = false;
+  else
+    temp->create_success = true;
+
+  sema_up(&(temp->create_sema));
+
+  if (!success)
     thread_exit ();
-  }
+  
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -112,8 +114,9 @@ process_wait (tid_t child_tid)
   struct thread *temp = NULL;
   struct list_elem *element;
   int exit_number;
+  struct thread *cur = thread_current();
 
-  for(element = list_begin(&(thread_current()->child_list)); element != list_end(&(thread_current()->child_list)); element = list_next(element))
+  for(element = list_begin(&(cur->child_list)); element != list_end(&(cur->child_list)); element = list_next(element))
 	  if((temp = list_entry(element,struct thread,child_elem))->tid == child_tid){
 		  sema_down(&(temp->parent_sema));
 		  list_remove(&(temp->child_elem));
@@ -566,4 +569,5 @@ void push_argument(int argc, char* argv[], void** esp)
   **(int**)esp = argc;
 
   *esp -= 4;
+
 }

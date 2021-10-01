@@ -19,32 +19,69 @@ syscall_handler (struct intr_frame *f)
   int syscall_no = *(int*)(f->esp);
 
   if(!is_user_vaddr(f->esp))
-	  kernel_exit(-1);
+	  exit(-1);
   if(syscall_no == SYS_HALT){
-	  shutdown_power_off();
+	  halt();
   }
   else if(syscall_no == SYS_EXIT){
 	  if(!is_user_vaddr(f->esp + 4))
-		  kernel_exit(-1);
-	kernel_exit(*(int*)(f->esp + 4));
+		  exit(-1);
+	exit(*(int*)(f->esp + 4));
   }
   else if(syscall_no == SYS_EXEC){
 	  if(!is_user_vaddr(f->esp + 4))
-		  kernel_exit(-1);
-	 f->eax = process_execute(*(int*)(f->esp + 4));
+		  exit(-1);
+	 f->eax = exec(*(int*)(f->esp + 4));
   }
   else if(syscall_no == SYS_WAIT){
 	  if(!is_user_vaddr(f->esp + 4))
-		  kernel_exit(-1);
-	f->eax = process_wait(*(int*)(f->esp + 4));
+		  exit(-1);
+	f->eax = wait(*(int*)(f->esp + 4));
   }
   else if(syscall_no == SYS_READ){
 	  if(!is_user_vaddr(f->esp + 4) || !is_user_vaddr(f->esp + 8) || !is_user_vaddr(f->esp + 12))
-		  kernel_exit(-1);
-	unsigned size = *(unsigned*)(f->esp + 12);
-	int* buffer = *(int*)(f->esp + 8);
-	int fd = *(int*)(f->esp + 4);
-	
+		  exit(-1);
+	f->eax = read(*(int*)(f->esp+4),*(int*)(f->esp+8),*(unsigned*)(f->esp+12));
+  }
+  else if(syscall_no == SYS_WRITE){
+	  if(!is_user_vaddr(f->esp + 4) || !is_user_vaddr(f->esp + 8) || !is_user_vaddr(f->esp + 12))
+		  exit(-1);
+	f->eax = write(*(int*)(f->esp + 4),*(int*)(f->esp+8),*(unsigned*)(f->esp+12));
+  }
+  else if(syscall_no == SYS_FIBONACCI){
+	if(!is_user_vaddr(f->esp + 4))
+		exit(-1);
+	f->eax = fibonacci(*(int*)(f->esp + 4));
+
+  }
+  else if(syscall_no == SYS_MAXOFFOURINT){
+	  if(!is_user_vaddr(f->esp + 4) || !is_user_vaddr(f->esp + 8) || !is_user_vaddr(f->esp + 12) ||
+			  !is_user_vaddr(f->esp + 16))
+		  exit(-1);
+	f->eax = max_of_four_int(*(int*)(f->esp+4),*(int*)(f->esp+8),*(int*)(f->esp+12),*(int*)(f->esp+16));
+  }
+
+  //thread_exit ();
+}
+
+void halt(){
+  shutdown_power_off();
+}
+void exit(int exit_number){
+
+  thread_current()->exit_number = exit_number;
+  printf("%s: exit(%d)\n",thread_current()->name,exit_number);
+  thread_exit();
+
+}
+int exec(const char* filename){
+	 return  process_execute(filename);
+}
+int wait(int pid){
+	return  process_wait(pid);
+}
+int read(int fd,int *buffer,unsigned size){
+
 	if(fd == 0){
 		for(int i=0; i<size; i++){
 			*buffer = input_getc();
@@ -55,50 +92,19 @@ syscall_handler (struct intr_frame *f)
 				break;
 			}
 		}
-		f->eax = size; 
+		return size; 
 	}
 	else
-		f->eax = -1;
-
-  }
-  else if(syscall_no == SYS_WRITE){
-	  if(!is_user_vaddr(f->esp + 4) || !is_user_vaddr(f->esp + 8) || !is_user_vaddr(f->esp + 12))
-		  kernel_exit(-1);
-	unsigned size = *(unsigned*)( f->esp + 12);
-	int buffer = *(int*)(f->esp + 8);
-	int fd = *(int*)(f->esp + 4);
-
+		return -1;
+}
+int write(int fd,int *buffer,unsigned size){
 	if(fd == 1){
 		putbuf((const char*)buffer,size);
-		f->eax = size;
+		return size;
 	}
 	else
-		f->eax = -1;
-  }
-  else if(syscall_no == SYS_FIBONACCI){
-	if(!is_user_vaddr(f->esp + 4))
-		kernel_exit(-1);
-	f->eax = fibonacci(*(int*)(f->esp + 4));
-
-  }
-  else if(syscall_no == SYS_MAXOFFOURINT){
-	  if(!is_user_vaddr(f->esp + 4) || !is_user_vaddr(f->esp + 8) || !is_user_vaddr(f->esp + 12) ||
-			  !is_user_vaddr(f->esp + 16))
-		  kernel_exit(-1);
-	f->eax = max_of_four_int(*(int*)(f->esp+4),*(int*)(f->esp+8),*(int*)(f->esp+12),*(int*)(f->esp+16));
-  }
-
-  //thread_exit ();
+		return -1;
 }
-
-void kernel_exit(int exit_number){
-
-  thread_current()->exit_number = exit_number;
-  printf("%s: exit(%d)\n",thread_current()->name,exit_number);
-  thread_exit();
-
-}
-
 int fibonacci(int n){
 	if( n <= 0)
 		return -1;
