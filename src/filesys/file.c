@@ -166,3 +166,10 @@ file_tell (struct file *file)
   ASSERT (file != NULL);
   return file->pos;
 }
+
+//my code temporary for debugging
+
+void file_print(struct file* file)
+{
+	inode_print(file->inode);
+}

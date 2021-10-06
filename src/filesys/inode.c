@@ -343,3 +343,9 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
+
+//my code temporary for debugging
+void
+inode_print(const struct inode *inode){
+	printf("[%d]\n",inode->deny_write_cnt);
+}

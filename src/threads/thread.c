@@ -467,7 +467,7 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
-
+/*add in proj1 */
   sema_init(&(t->parent_sema),0);
   sema_init(&(t->parent_sema2),0);
   sema_init(&(t->create_sema),0);
@@ -476,6 +476,9 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&(t->parent_list));
   list_push_back(&(t->parent_list),&(running_thread()->parent_elem));
   t->create_success = true;
+/*add in proj2 */
+  list_init(&(t->file_list));
+  t->file_bitmap = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
