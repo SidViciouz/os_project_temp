@@ -171,5 +171,6 @@ file_tell (struct file *file)
 
 void file_print(struct file* file)
 {
-	inode_print(file->inode);
+	//inode_print(file->inode);
+	printf("file_position : [%d]\n",file->pos);
 }

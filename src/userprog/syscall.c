@@ -134,6 +134,7 @@ int read(int fd,int *buffer,unsigned size){
 	else{
 		struct list_elem* elem;
 		struct list_item* item;
+		unsigned w_size = 0;
 		for(elem = list_begin(&(thread_current()->file_list));
 			elem != list_end(&(thread_current()->file_list)); elem = list_next(elem)){
 			if((item = list_entry(elem,struct list_item,elem))->fd == fd)
@@ -156,7 +157,6 @@ int write(int fd,int *buffer,unsigned size){
 		for(elem = list_begin(&(thread_current()->file_list));
 			elem != list_end(&(thread_current()->file_list)); elem = list_next(elem)){
 			if((item = list_entry(elem,struct list_item,elem))->fd == fd)
-				file_allow_write(item->f);
 				w_size = file_write(item->f,buffer,size);
 				return w_size;
 		}
@@ -217,7 +217,10 @@ int open(const char* file){
 	item->fd = fd;
 	item->f = f;
 	list_push_back(&(thread_current()->file_list),&(item->elem));
-	file_deny_write(item->f);
+	
+	if(thread_findname_foreach(file))
+		file_deny_write(item->f);
+
 	return fd;
 }
 int filesize(int fd){
