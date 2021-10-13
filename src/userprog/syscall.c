@@ -134,11 +134,15 @@ int read(int fd,int *buffer,unsigned size){
 	else{
 		struct list_elem* elem;
 		struct list_item* item;
-		unsigned w_size = 0;
+		unsigned r_size = 0;
 		for(elem = list_begin(&(thread_current()->file_list));
 			elem != list_end(&(thread_current()->file_list)); elem = list_next(elem)){
-			if((item = list_entry(elem,struct list_item,elem))->fd == fd)
-				return file_read(item->f,buffer,size);
+			if((item = list_entry(elem,struct list_item,elem))->fd == fd){
+				file_read_sema_down(item->f);	
+				r_size =  file_read(item->f,buffer,size);
+				file_read_sema_up(item->f);
+				return r_size;
+			}
 		}
 		return 0;
 	}
@@ -156,9 +160,12 @@ int write(int fd,int *buffer,unsigned size){
 		unsigned w_size = 0;
 		for(elem = list_begin(&(thread_current()->file_list));
 			elem != list_end(&(thread_current()->file_list)); elem = list_next(elem)){
-			if((item = list_entry(elem,struct list_item,elem))->fd == fd)
+			if((item = list_entry(elem,struct list_item,elem))->fd == fd){
+				file_write_sema_down(item->f);
 				w_size = file_write(item->f,buffer,size);
+				file_write_sema_up(item->f);
 				return w_size;
+			}
 		}
 		return 0;
 	}

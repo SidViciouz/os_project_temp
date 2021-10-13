@@ -26,4 +26,9 @@ void file_seek (struct file *, off_t);
 off_t file_tell (struct file *);
 off_t file_length (struct file *);
 
+void file_print(struct file* file);
+void file_write_sema_down(struct file* file);
+void file_wrtie_sema_up(struct file* file);
+void file_read_sema_down(struct file* file);
+void file_read_sema_up(struct file* file);
 #endif /* filesys/file.h */
