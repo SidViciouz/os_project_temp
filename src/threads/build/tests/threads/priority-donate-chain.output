@@ -1,4 +1,4 @@
-qemu-system-i386 -device isa-debug-exit -hda /tmp/Ry49XllumQ.dsk -m 4 -net none -nographic -monitor null
+qemu-system-i386 -device isa-debug-exit -hda /tmp/eF1aE7OKR0.dsk -m 4 -net none -nographic -monitor null
 c[?7l[2J[0mSeaBIOS (version 1.13.0-1ubuntu1.1)
 Booting from Hard Disk...
 PPiiLLoo  hhddaa1

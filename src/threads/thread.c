@@ -640,10 +640,10 @@ void thread_block_with_time(int64_t ticks)
 
   //list_push_back(&blocked_list,&cur->block_elem);
   list_insert_ordered(&blocked_list,&cur->block_elem,list_compare_priority,NULL);
-  cur->status = THREAD_BLOCKED;
-  schedule();
+  //cur->status = THREAD_BLOCKED;
+  //schedule();
 
-  //thread_block();
+  thread_block();
   intr_set_level(old_level);
   
 }
@@ -662,7 +662,6 @@ void block_check()
 	  if( th->ticks <= timer_ticks()){
 		  thread_unblock(th);
 		  e = list_remove(e);
-		  break;
 	  }
 	  else 
 		  e = list_next(e);
