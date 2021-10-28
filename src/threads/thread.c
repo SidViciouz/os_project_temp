@@ -14,6 +14,7 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+#include "devices/timer.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -24,6 +25,8 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+//proj3
+static struct list blocked_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -53,6 +56,11 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
+
+#ifndef USERPROG
+/* project 3 */
+bool thread_prior_aging;
+#endif
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -92,6 +100,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&blocked_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -137,6 +146,11 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+  /* project 3 */
+  //block_check();
+  if(thread_prior_aging == true)
+	  thread_aging();
 }
 
 /* Prints thread statistics. */
@@ -237,7 +251,9 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list,&t->elem,list_compare_priority,NULL);
+  //list_insert_priority(&ready_list,&t->elem);
+  //list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -308,7 +324,9 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  	list_insert_ordered(&ready_list,&cur->elem,list_compare_priority,NULL);
+    //list_insert_priority(&ready_list,&cur->elem);
+    //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -608,4 +626,90 @@ thread_findname_foreach (const char* name)
 	      return true;
     }
   return false;
+}
+void thread_block_with_time(int64_t ticks)
+{
+  struct thread* cur = thread_current();
+  enum intr_level old_level;
+
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable();
+  
+  cur->ticks = ticks;
+
+  //list_push_back(&blocked_list,&cur->block_elem);
+  list_insert_ordered(&blocked_list,&cur->block_elem,list_compare_priority,NULL);
+  cur->status = THREAD_BLOCKED;
+  schedule();
+
+  //thread_block();
+  intr_set_level(old_level);
+  
+}
+void block_check()
+{
+  struct list_elem* e;
+  struct thread* th;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  if(list_empty(&blocked_list))
+	 return;
+
+  for(e = list_begin(&blocked_list); e != list_end(&blocked_list);){
+	  th = list_entry(e,struct thread,block_elem);
+	  if( th->ticks <= timer_ticks()){
+		  thread_unblock(th);
+		  e = list_remove(e);
+		  break;
+	  }
+	  else 
+		  e = list_next(e);
+  }
+}
+void thread_aging()
+{
+	if(thread_current()->priority < PRI_MAX)
+	      thread_current()->priority++;	
+}
+
+void list_insert_priority(struct list* list,struct list_elem* elem)
+{
+	struct list_elem* e;
+	struct thread* th;
+	int priority;
+	bool insert = false;
+
+       	th = list_entry(elem,struct thread,elem);
+	priority = th->priority;
+
+	if(list_empty(list))
+		list_push_back(list,elem);
+
+	else{
+		
+		for(e = list_begin(list); e != list_end(list); e = list_next(e)){
+			th = list_entry(e,struct thread,elem);
+			if(th->priority < priority){
+				e = list_prev(e);
+				list_insert(e,elem);
+				insert = true;
+				break;
+			}
+		}
+		if(!insert)
+			list_push_back(list,elem);
+	}
+}
+
+bool list_compare_priority(struct list_elem* a,struct list_elem* b,void *aux)
+{
+  struct thread* temp1 = list_entry(a,struct thread, elem);
+  struct thread* temp2 = list_entry(b,struct thread, elem);
+
+  if(temp1->priority > temp2->priority)
+	  return true;
+  else
+	  return false;
 }

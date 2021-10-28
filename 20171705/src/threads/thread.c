@@ -467,7 +467,7 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
-
+/*add in proj1 */
   sema_init(&(t->parent_sema),0);
   sema_init(&(t->parent_sema2),0);
   sema_init(&(t->create_sema),0);
@@ -476,6 +476,9 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&(t->parent_list));
   list_push_back(&(t->parent_list),&(running_thread()->parent_elem));
   t->create_success = true;
+/*add in proj2 */
+  list_init(&(t->file_list));
+  t->file_bitmap = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -591,3 +594,18 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+bool
+thread_findname_foreach (const char* name)
+{
+  struct list_elem *e;
+
+  for (e = list_begin (&all_list); e != list_end (&all_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, allelem);
+      if(!strcmp(t->name,name))
+	      return true;
+    }
+  return false;
+}

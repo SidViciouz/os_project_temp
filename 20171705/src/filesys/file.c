@@ -2,6 +2,7 @@
 #include <debug.h>
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /* An open file. */
 struct file 
@@ -9,6 +10,8 @@ struct file
     struct inode *inode;        /* File's inode. */
     off_t pos;                  /* Current position. */
     bool deny_write;            /* Has file_deny_write() been called? */
+    struct semaphore file_sema;
+    int read_cnt;
   };
 
 /* Opens a file for the given INODE, of which it takes ownership,
@@ -23,6 +26,8 @@ file_open (struct inode *inode)
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
+      sema_init(&(file->file_sema),1);
+      file->read_cnt = 0;
       return file;
     }
   else
@@ -165,4 +170,24 @@ file_tell (struct file *file)
 {
   ASSERT (file != NULL);
   return file->pos;
+}
+
+
+void file_write_sema_down(struct file* file){
+	sema_down(&(file->file_sema));
+}
+
+void file_write_sema_up(struct file* file){
+	sema_up(&(file->file_sema));
+}
+
+void file_read_sema_down(struct file* file){
+	if(file->read_cnt == 0)
+		sema_down(&(file->file_sema));
+	file->read_cnt++;
+}
+void file_read_sema_up(struct file* file){
+	file->read_cnt--;
+	if(file->read_cnt == 0)
+		sema_up(&(file->file_sema));
 }

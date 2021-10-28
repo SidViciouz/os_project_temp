@@ -43,12 +43,11 @@ process_execute (const char *file_name)
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   sema_down(&(thread_current()->create_sema));
 
-  if(!thread_current()->create_success)
-  	return -1;
-
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
 
+  if(!thread_current()->create_success)
+	  return -1;
   return tid;
 }
 
@@ -136,8 +135,20 @@ process_exit (void)
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+  struct list_elem* elem;
+  struct list_item* item;
+  for(elem = list_begin(&(cur->file_list));
+  	  elem != list_end(&(cur->file_list));){
+	  	  item = list_entry(elem,struct list_item,elem);
+		  file_close(item->f);
+		  elem = list_remove(elem);
+		  free(item);
+	  }
+  bitmap_destroy(cur->file_bitmap); 
+
   sema_up(&(cur->parent_sema));
   sema_down(&(cur->parent_sema2));
+  
   pd = cur->pagedir;
   if (pd != NULL) 
     {

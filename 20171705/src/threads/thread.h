@@ -3,6 +3,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include <bitmap.h>
 #include "synch.h"
 #include <stdint.h>
 
@@ -107,6 +108,9 @@ struct thread
     struct semaphore parent_sema2;
     struct semaphore create_sema;
     bool create_success;
+    struct list file_list;
+    struct bitmap* file_bitmap;
+
 #endif
 
     /* Owned by thread.c. */
@@ -149,4 +153,5 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+bool thread_findname_foreach (const char* name);
 #endif /* threads/thread.h */
