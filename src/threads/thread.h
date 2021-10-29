@@ -120,6 +120,7 @@ struct thread
 
     struct list_elem block_elem;
     uint64_t ticks;
+    int nice;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
