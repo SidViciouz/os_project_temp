@@ -175,14 +175,15 @@ void thread_aging(void);
 bool list_compare_priority(struct list_elem* a,struct list_elem* b,void *aux);
 
 //fixed-point
-int64_t int_to_fixed(int num);
-int fixed_to_int(int64_t fixed);
-int64_t fixed_cal_int(int64_t fixed,int num,enum cal op);
-int64_t int_cal_fixed(int num,int64_t fixed,enum cal op);
-int64_t fixed_cal_fixed(int64_t fixed1,int64_t fixed2,enum cal op);
+int int_to_fixed(int num);
+int fixed_to_int(int fixed);
+int fixed_cal_int(int fixed,int num,enum cal op);
+int int_cal_fixed(int num,int fixed,enum cal op);
+int fixed_cal_fixed(int fixed1,int fixed2,enum cal op);
 
 void calculate_load_avg();
 void calculate_recent_cpu();
 void calculate_priority();
 
+int max_priority();
 #endif /* threads/thread.h */
