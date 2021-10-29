@@ -1,3 +1,3 @@
-WARNING: Image format was not specified for '/tmp/fuU3vWFpR1.dsk' and probing guessed raw.
+WARNING: Image format was not specified for '/tmp/e9m0s2I5xF.dsk' and probing guessed raw.
          Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.
          Specify the 'raw' format explicitly to remove the restrictions.

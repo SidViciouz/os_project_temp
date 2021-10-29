@@ -1,5 +1,5 @@
 FAIL
-Kernel panic in run: PANIC at ../../tests/threads/tests.c:93 in fail(): test failed
-Call stack: 0xc0029e16
+Kernel panic in run: PANIC at ../../tests/threads/tests.c:96 in fail(): test failed
+Call stack: 0xc002a2c6
 Translation of call stack:
-0xc0029e16: debug_panic (.../../lib/kernel/debug.c:38)
+0xc002a2c6: debug_panic (.../../lib/kernel/debug.c:38)

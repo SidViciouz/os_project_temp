@@ -11,6 +11,12 @@
 /* project 3 */
 extern bool thread_prior_aging;
 #endif
+enum cal{
+	ADD,
+	SUB,
+	MUL,
+	DIV
+};
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -121,6 +127,7 @@ struct thread
     struct list_elem block_elem;
     uint64_t ticks;
     int nice;
+    int64_t recent_cpu;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
@@ -165,6 +172,17 @@ bool thread_findname_foreach (const char* name);
 void thread_block_with_time(int64_t ticks);
 void block_check(void);
 void thread_aging(void);
-void list_insert_priority(struct list* list,struct list_elem* elem);
 bool list_compare_priority(struct list_elem* a,struct list_elem* b,void *aux);
+
+//fixed-point
+int64_t int_to_fixed(int num);
+int fixed_to_int(int64_t fixed);
+int64_t fixed_cal_int(int64_t fixed,int num,enum cal op);
+int64_t int_cal_fixed(int num,int64_t fixed,enum cal op);
+int64_t fixed_cal_fixed(int64_t fixed1,int64_t fixed2,enum cal op);
+
+void calculate_load_avg();
+void calculate_recent_cpu();
+void calculate_priority();
+
 #endif /* threads/thread.h */

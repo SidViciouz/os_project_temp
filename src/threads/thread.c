@@ -27,6 +27,8 @@ static struct list ready_list;
 
 //proj3
 static struct list blocked_list;
+
+static int64_t load_avg;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -101,12 +103,16 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&blocked_list);
+  load_avg = 0;
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
+  initial_thread->nice = 0;
+  initial_thread->recent_cpu = 0;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -117,7 +123,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  thread_create ("idle", PRI_MIN, idle, &idle_started); //여기에서 자식 프로세스를 추가해준다.
+  thread_create ("idle", PRI_MIN, idle, &idle_started); 
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -148,9 +154,19 @@ thread_tick (void)
     intr_yield_on_return ();
 
   /* project 3 */
-  //block_check();
-  if(thread_prior_aging == true)
+  block_check();
+
+  if(thread_prior_aging == true){
 	  thread_aging();
+
+	  if(timer_ticks()%TIMER_FREQ == 0){
+		  calculate_load_avg();
+		  calculate_recent_cpu();
+	  }
+  
+	  if(timer_ticks()%4 == 0)
+		  calculate_priority();
+  }
 }
 
 /* Prints thread statistics. */
@@ -387,17 +403,15 @@ thread_get_nice (void)
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
-{
-  /* Not yet implemented. */
-  return 0;
+{  
+  return fixed_to_int(load_avg*100);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return fixed_to_int(thread_current()->recent_cpu*100);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -505,7 +519,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->file_bitmap = NULL;
 
 /* add in proj3 */
-  t->nice = 0;
+  t->nice = running_thread()->nice;
+  t->recent_cpu = running_thread()->recent_cpu;;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -678,35 +693,7 @@ void block_check()
 }
 void thread_aging()
 {
-}
-
-void list_insert_priority(struct list* list,struct list_elem* elem)
-{
-	struct list_elem* e;
-	struct thread* th;
-	int priority;
-	bool insert = false;
-
-       	th = list_entry(elem,struct thread,elem);
-	priority = th->priority;
-
-	if(list_empty(list))
-		list_push_back(list,elem);
-
-	else{
-		
-		for(e = list_begin(list); e != list_end(list); e = list_next(e)){
-			th = list_entry(e,struct thread,elem);
-			if(th->priority < priority){
-				e = list_prev(e);
-				list_insert(e,elem);
-				insert = true;
-				break;
-			}
-		}
-		if(!insert)
-			list_push_back(list,elem);
-	}
+  thread_current()->recent_cpu = fixed_cal_int(thread_current()->recent_cpu,1,ADD);
 }
 
 bool list_compare_priority(struct list_elem* a,struct list_elem* b,void *aux)
@@ -718,4 +705,95 @@ bool list_compare_priority(struct list_elem* a,struct list_elem* b,void *aux)
 	  return true;
   else
 	  return false;
+}
+int64_t int_to_fixed(int num)
+{
+	return (int64_t)num*(1<<14);
+}
+int fixed_to_int(int64_t fixed)
+{
+	return (int)fixed/(1<<14);
+}
+int64_t fixed_cal_int(int64_t fixed,int num,enum cal op)
+{
+	switch(op){
+		case ADD : return fixed + num*(1<<14);
+			   break;
+		case SUB : return fixed - num*(1<<14);
+			   break;
+		case MUL : return fixed*num;
+			   break;
+		case DIV : return fixed/num;
+			   break;
+		default : return 0;
+	}
+}
+int64_t int_cal_fixed(int num,int64_t fixed,enum cal op)
+{
+	switch(op){
+		case SUB : return num*(1<<14) - fixed;
+			   break;
+		default : return 0;
+	}
+}
+int64_t fixed_cal_fixed(int64_t fixed1,int64_t fixed2,enum cal op)
+{
+	switch(op){
+		case ADD : return fixed1 + fixed2;
+			   break;
+		case SUB : return fixed1 - fixed2;
+			   break;
+		case MUL : return fixed1*fixed2/(1<<14);
+			   break;
+		case DIV : return fixed1*(1<<14)/fixed2;
+			   break;
+		default : return 0;
+	}
+}
+void calculate_load_avg()
+{
+  int64_t retval;
+ 
+  int64_t term1 = fixed_cal_fixed(int_to_fixed(59),int_to_fixed(60),DIV);
+  int64_t term2 = fixed_cal_fixed(int_to_fixed(1),int_to_fixed(60),DIV);
+  
+  term1 = fixed_cal_fixed(term1,load_avg,MUL);
+  if(thread_current() != idle_thread)
+	  term2 = fixed_cal_fixed(term2,list_size(&ready_list)+1,MUL);
+  else
+	  term2 = fixed_cal_fixed(term2,list_size(&ready_list),MUL);
+
+  load_avg = fixed_cal_fixed(term1,term2,ADD);
+}
+
+void calculate_recent_cpu()
+{
+  struct thread *th;
+  struct list_elem *e;
+  int64_t term1;
+  
+  for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
+	  th = list_entry(e,struct thread,allelem);
+  	  term1 = fixed_cal_fixed(2*load_avg,fixed_cal_int(2*load_avg,1,ADD),DIV);
+	  term1 = fixed_cal_fixed(term1,th->recent_cpu,DIV);
+
+	  th->recent_cpu = fixed_cal_int(term1,th->nice,ADD);
+  }
+}
+
+void calculate_priority()
+{
+  struct thread *th;
+  struct list_elem *e;
+  int64_t term1;
+
+  for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
+	  th = list_entry(e,struct thread,allelem);
+	  
+  	  term1 = fixed_cal_int(th->recent_cpu,4,DIV);
+  	  term1 = fixed_cal_int(term1,th->nice*2,ADD);
+
+	  th->priority = fixed_to_int(int_cal_fixed(PRI_MAX,term1,SUB));
+  }
+
 }
