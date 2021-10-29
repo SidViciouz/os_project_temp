@@ -371,8 +371,8 @@ void
 thread_set_priority (int new_priority) 
 {
 	
-  if(thread_mlfqs)
-	  return;
+/*  if(thread_mlfqs)
+	  return;*/
   if(thread_current()->priority > new_priority)
   {
   	thread_current ()->priority = new_priority;
@@ -408,11 +408,11 @@ thread_set_nice (int nice)
 
   thread_current()->priority = new_priority;
 
-  /*
+  
   if(old_priority > new_priority)
-	thread_yield();*/
+	thread_yield();/*
   if(new_priority < max_priority())
-	  thread_yield();
+	  thread_yield();*/
 }
 
 /* Returns the current thread's nice value. */
@@ -542,7 +542,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
 /* add in proj3 */
   t->nice = running_thread()->nice;
-  t->recent_cpu = running_thread()->recent_cpu;;
+  t->recent_cpu = running_thread()->recent_cpu;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -821,11 +821,9 @@ void calculate_priority()
 
 	  th->priority = new_priority;
   }
-  //list_sort(&ready_list,list_compare_priority,NULL);
-/*
+  list_sort(&ready_list,list_compare_priority,NULL);
+
   if(old_priority > thread_current()->priority)
-	  intr_yield_on_return();*/
-  if(thread_current()->priority < max_priority())
 	  intr_yield_on_return();
 }
 
