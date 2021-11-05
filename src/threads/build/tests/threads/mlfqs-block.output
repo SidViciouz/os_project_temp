@@ -1,5 +1,5 @@
-qemu-system-i386 -device isa-debug-exit -hda /tmp/GFD09XTrMG.dsk -m 4 -net none -nographic -monitor null
-c[?7l[2J[0mSeaBIOS (version 1.13.0-1ubuntu1.1)
+qemu-system-i386 -device isa-debug-exit -hda /tmp/LmBZ9Micdq.dsk -m 4 -net none -nographic -monitor null
+c[?7l[2J[0mSeaBIOS (version 1.13.0-1ubuntu1)
 Booting from Hard Disk...
 PPiiLLoo  hhddaa1
 1
@@ -8,7 +8,7 @@ Kernel command line: -q -mlfqs run mlfqs-block
 Pintos booting with 3,968 kB RAM...
 367 pages available in kernel pool.
 367 pages available in user pool.
-Calibrating timer...  421,888,000 loops/s.
+Calibrating timer...  412,876,800 loops/s.
 Boot complete.
 Executing 'mlfqs-block':
 (mlfqs-block) begin
@@ -22,8 +22,8 @@ Executing 'mlfqs-block':
 (mlfqs-block) Block thread should have already acquired lock.
 (mlfqs-block) end
 Execution of 'mlfqs-block' complete.
-Timer: 3032 ticks
-Thread: 500 idle ticks, 2532 kernel ticks, 0 user ticks
+Timer: 3026 ticks
+Thread: 500 idle ticks, 2526 kernel ticks, 0 user ticks
 Console: 779 characters output
 Keyboard: 0 keys pressed
 Powering off...

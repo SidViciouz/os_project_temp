@@ -185,5 +185,4 @@ void calculate_load_avg();
 void calculate_recent_cpu();
 void calculate_priority();
 
-int max_priority();
 #endif /* threads/thread.h */

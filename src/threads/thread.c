@@ -271,8 +271,6 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_insert_ordered(&ready_list,&t->elem,list_compare_priority,NULL);
-  //list_insert_priority(&ready_list,&t->elem);
-  //list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -370,9 +368,6 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-	
-/*  if(thread_mlfqs)
-	  return;*/
   if(thread_current()->priority > new_priority)
   {
   	thread_current ()->priority = new_priority;
@@ -410,9 +405,7 @@ thread_set_nice (int nice)
 
   
   if(old_priority > new_priority)
-	thread_yield();/*
-  if(new_priority < max_priority())
-	  thread_yield();*/
+	thread_yield();
 }
 
 /* Returns the current thread's nice value. */
@@ -684,10 +677,7 @@ void thread_block_with_time(int64_t ticks)
   
   cur->ticks = ticks;
 
-  //list_push_back(&blocked_list,&cur->block_elem);
   list_insert_ordered(&blocked_list,&cur->block_elem,list_compare_priority,NULL);
-  //cur->status = THREAD_BLOCKED;
-  //schedule();
 
   thread_block();
   intr_set_level(old_level);
@@ -781,7 +771,6 @@ void calculate_load_avg()
 	  ready_length++;
 
   load_avg = fixed_cal_int(fixed_cal_int(fixed_cal_int(load_avg,59,MUL),ready_length,ADD),60,DIV);
-  //printf("%d %d\n",load_avg,ready_length);
 }
 
 void calculate_recent_cpu()
@@ -826,16 +815,3 @@ void calculate_priority()
   if(old_priority > thread_current()->priority)
 	  intr_yield_on_return();
 }
-
-int max_priority()
-{
-	int priority = -1;
-	struct thread *t;
-
-	if(!list_empty(&ready_list)){
-		t = list_entry(list_front(&ready_list),struct thread, elem);
-		priority = t->priority;
-	}
-	return priority;
-}
-
