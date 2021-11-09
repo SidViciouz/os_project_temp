@@ -172,6 +172,13 @@ file_tell (struct file *file)
   return file->pos;
 }
 
+//my code temporary for debugging
+
+void file_print(struct file* file)
+{
+	//inode_print(file->inode);
+	printf("file_position : [%d]\n",file->pos);
+}
 
 void file_write_sema_down(struct file* file){
 	sema_down(&(file->file_sema));

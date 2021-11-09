@@ -7,6 +7,17 @@
 #include "synch.h"
 #include <stdint.h>
 
+#ifndef USERPROG
+/* project 3 */
+extern bool thread_prior_aging;
+#endif
+enum cal{
+	ADD,
+	SUB,
+	MUL,
+	DIV
+};
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -99,6 +110,8 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     /* code about chlid process (i added)*/
+
+#endif
     uint32_t exit_number;
     struct list child_list;
     struct list_elem child_elem;
@@ -111,8 +124,10 @@ struct thread
     struct list file_list;
     struct bitmap* file_bitmap;
 
-#endif
-
+    struct list_elem block_elem;
+    uint64_t ticks;
+    int nice;
+    int64_t recent_cpu;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
@@ -154,4 +169,20 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 bool thread_findname_foreach (const char* name);
+void thread_block_with_time(int64_t ticks);
+void block_check(void);
+void thread_aging(void);
+bool list_compare_priority(struct list_elem* a,struct list_elem* b,void *aux);
+
+//fixed-point
+int int_to_fixed(int num);
+int fixed_to_int(int fixed);
+int fixed_cal_int(int fixed,int num,enum cal op);
+int int_cal_fixed(int num,int fixed,enum cal op);
+int fixed_cal_fixed(int fixed1,int fixed2,enum cal op);
+
+void calculate_load_avg();
+void calculate_recent_cpu();
+void calculate_priority();
+
 #endif /* threads/thread.h */

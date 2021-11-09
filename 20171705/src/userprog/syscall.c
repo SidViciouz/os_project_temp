@@ -277,9 +277,11 @@ void close(int fd){
 		bitmap_set(thread_current()->file_bitmap,1,true);
 	}
 
+	//temporary code in project 2
 	if(fd == 0 || fd == 1){
 		bitmap_set(thread_current()->file_bitmap,fd,false);
 	}
+	//
 	struct list_elem* elem;
 	struct list_item* item;
 	for(elem = list_begin(&(thread_current()->file_list));

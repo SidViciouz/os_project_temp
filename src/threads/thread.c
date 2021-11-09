@@ -153,8 +153,9 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 
-  /* project 3 */
   block_check();
+#ifndef USERPROG
+  /* project 3 */
 
   if(thread_prior_aging == true || thread_mlfqs == true){
 	  thread_aging();
@@ -167,6 +168,7 @@ thread_tick (void)
 	  if(timer_ticks()%4 == 0)
 		  calculate_priority();
   }
+#endif
 }
 
 /* Prints thread statistics. */
@@ -231,6 +233,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /*proj3*/
   if(thread_current()->priority < priority)
   	thread_yield();
 
@@ -270,7 +273,9 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  /*proj3*/
   list_insert_ordered(&ready_list,&t->elem,list_compare_priority,NULL);
+  //list_push_back(&ready_list,&t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -341,9 +346,12 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
+	  //proj3
   	list_insert_ordered(&ready_list,&cur->elem,list_compare_priority,NULL);
+	//list_push_back(&ready_list,&cur->elem);
   cur->status = THREAD_READY;
   schedule ();
+
   intr_set_level (old_level);
 }
 
@@ -371,6 +379,7 @@ thread_set_priority (int new_priority)
   if(thread_current()->priority > new_priority)
   {
   	thread_current ()->priority = new_priority;
+	/*proj3*/
 	thread_yield();
   }
   else
@@ -403,7 +412,7 @@ thread_set_nice (int nice)
 
   thread_current()->priority = new_priority;
 
-  
+ /*proj3*/ 
   if(old_priority > new_priority)
 	thread_yield();
 }
