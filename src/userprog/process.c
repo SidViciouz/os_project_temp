@@ -398,7 +398,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  //proj4 edited
+  //file_close (file);
   return success;
 }
 
@@ -482,7 +483,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-  /*   
+/*     
       // Get a page of memory.
       uint8_t *kpage = palloc_get_page (PAL_USER);
       if (kpage == NULL)
@@ -505,12 +506,17 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 */
       struct spt_e *spte = (struct spte *)malloc(sizeof(struct spt_e));
       spte->vaddr = upage;
+      spte->page_read_bytes = page_read_bytes;
+      spte->page_zero_bytes = page_zero_bytes;
+      spte->writable = writable;
+      spte->file = file;
+      spte->ofs = ofs;
       hash_insert(&thread_current()->spt,&(spte->elem));
-   
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
+      ofs += page_read_bytes;
     }
   return true;
 }
@@ -532,6 +538,15 @@ setup_stack (void **esp)
       else
         palloc_free_page (kpage);
     }
+  //must be edited later
+  struct spt_e *spte = (struct spt_e*)malloc(sizeof(struct spt_e));
+  spte->vaddr = (uint8_t*)PHYS_BASE - PGSIZE;
+  spte->page_read_bytes = PGSIZE;
+  spte->page_zero_bytes = 0;
+  spte->writable = true;
+  spte->file = NULL;
+  hash_insert(&thread_current()->spt,&(spte->elem));
+
   return success;
 }
 
@@ -588,4 +603,7 @@ void push_argument(int argc, char* argv[], void** esp)
 
   *esp -= 4;
 
+}
+bool call_install_page(void *upage,void* kpage, bool writable){
+	return install_page(upage,kpage,writable);
 }

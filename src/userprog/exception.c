@@ -6,6 +6,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/syscall.h"
+#include <hash.h>
+#include "threads/palloc.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -137,7 +139,6 @@ page_fault (struct intr_frame *f)
      [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
-
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
   intr_enable ();
@@ -150,15 +151,47 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  if(!user)
+  if(!user){
+	  //printf("user fault\n");
 	  exit(-1);
+  }
 
-  else if(is_kernel_vaddr(fault_addr))
+  else if(is_kernel_vaddr(fault_addr)){
+	  //printf("kernel address fault\n");
 	  exit(-1);
+  }
 
-  else if(not_present)
-	  exit(-1);
+  else if(not_present){
+	  	struct spt_e find_element;
 
+		  find_element.vaddr = pg_round_down(fault_addr);
+		  struct hash_elem *e = hash_find(&thread_current()->spt,&find_element.elem);
+		  if(e == NULL){
+			  printf("e == NULL\n");
+			  exit(-1);
+		  }
+		  uint8_t *kpage = palloc_get_page(PAL_USER);
+		  if(kpage == NULL){
+			  printf("kpage == NULL\n");
+			  exit(-1);
+		  }
+		  struct spt_e* found = hash_entry(e,struct spt_e,elem);
+		  file_seek(found->file,found->ofs);
+		  if(file_read(found->file,kpage,found->page_read_bytes) != (int) found->page_read_bytes){
+			  palloc_free_page(kpage);
+			  printf("file read error \n");
+			  exit(-1);
+		  }
+		  memset(kpage + found->page_read_bytes,0,found->page_zero_bytes);
+	
+		  struct thread *t = thread_current();
+		  if(!call_install_page(found->vaddr,kpage,found->writable)){
+			  palloc_free_page(kpage);
+			  printf("install page error\n");
+			  exit(-1);
+		  }
+	}	  
+	  return;
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
