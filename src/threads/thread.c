@@ -545,6 +545,7 @@ init_thread (struct thread *t, const char *name, int priority)
 /* add in proj3 */
   t->nice = running_thread()->nice;
   t->recent_cpu = running_thread()->recent_cpu;
+
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
