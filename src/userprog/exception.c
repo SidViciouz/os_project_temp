@@ -8,6 +8,7 @@
 #include "userprog/syscall.h"
 #include <hash.h>
 #include "threads/palloc.h"
+#include "devices/block.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -130,7 +131,6 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
-
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
@@ -155,31 +155,53 @@ page_fault (struct intr_frame *f)
 	  //printf("user fault\n");
 	  exit(-1);
   }
-
   else if(is_kernel_vaddr(fault_addr)){
 	  //printf("kernel address fault\n");
 	  exit(-1);
   }
 
-  else if(not_present){
+  if(not_present){
 	  	struct spt_e find_element;
-
 		  find_element.vaddr = pg_round_down(fault_addr);
 		  struct hash_elem *e = hash_find(&thread_current()->spt,&find_element.elem);
 		  if(e == NULL){
-			  printf("e == NULL\n");
-			  exit(-1);
+			  //determining whether it is growable region is needed to be added.
+	  		  unsigned number_of_page = (PHYS_BASE - f->esp)/4096 + 1;
+			  unsigned number_of_page_to_allocate = ((unsigned)PHYS_BASE - (unsigned)fault_addr)/4096 + 2;
+			  //printf("a : %x\n",f->esp);
+			  //printf("b : %x\n",fault_addr);
+			  if(number_of_page_to_allocate > 2048)
+				 exit(-1);
+			  
+			  //printf("to allocate : %u\n",number_of_page_to_allocate - number_of_page);
+			  for(int i=0; i<number_of_page_to_allocate - number_of_page; i++){
+				 uint8_t *page = palloc_get_page(PAL_USER);
+				 struct thread *t = thread_current();
+		  		 if(!call_install_page(pg_round_down(fault_addr),page,true)){ //writable need to edited
+				 	palloc_free_page(page);
+			  		exit(-1);
+				 }
+
+			  }
+			  return; 
+			  //printf("to allocate : %u\n",number_of_page_to_allocate);
+			  //printf("growable error\n");
+			  //exit(-1);
 		  }
 		  uint8_t *kpage = palloc_get_page(PAL_USER);
 		  if(kpage == NULL){
-			  printf("kpage == NULL\n");
+			  //memory full. i need to add swapping.
+			  //printf("kpage == NULL\n");
+			  if(block_get_role(BLOCK_SWAP) != NULL){
+				  printf("can use swap partition\n");
+			  }
 			  exit(-1);
 		  }
 		  struct spt_e* found = hash_entry(e,struct spt_e,elem);
 		  file_seek(found->file,found->ofs);
 		  if(file_read(found->file,kpage,found->page_read_bytes) != (int) found->page_read_bytes){
 			  palloc_free_page(kpage);
-			  printf("file read error \n");
+			  //printf("file read error \n");
 			  exit(-1);
 		  }
 		  memset(kpage + found->page_read_bytes,0,found->page_zero_bytes);
@@ -187,11 +209,13 @@ page_fault (struct intr_frame *f)
 		  struct thread *t = thread_current();
 		  if(!call_install_page(found->vaddr,kpage,found->writable)){
 			  palloc_free_page(kpage);
-			  printf("install page error\n");
+			  //printf("install page error\n");
 			  exit(-1);
 		  }
-	}	  
 	  return;
+	}
+  else if(write && user)
+	exit(-1);  
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to

@@ -119,6 +119,7 @@ int wait(int pid){
 int read(int fd,int *buffer,unsigned size){
 	if(!is_user_vaddr(buffer))
 		exit(-1);
+	//materialize user address validity check using spt
 	if(fd == 0){
 		for(int i=0; i<size; i++){
 			*buffer = input_getc();
