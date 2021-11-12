@@ -17,8 +17,10 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
   int syscall_no = *(int*)(f->esp);
-
+/*
   if(!is_user_vaddr(f->esp))
+	  exit(-1);*/
+  if(!is_valid_address(f->esp))
 	  exit(-1);
   if(syscall_no == SYS_HALT){
 	  halt();
@@ -117,7 +119,10 @@ int wait(int pid){
 	return  process_wait(pid);
 }
 int read(int fd,int *buffer,unsigned size){
+	/*
 	if(!is_user_vaddr(buffer))
+		exit(-1);*/
+	if(!is_valid_address(buffer))
 		exit(-1);
 	//materialize user address validity check using spt
 	if(fd == 0){
@@ -139,7 +144,7 @@ int read(int fd,int *buffer,unsigned size){
 		for(elem = list_begin(&(thread_current()->file_list));
 			elem != list_end(&(thread_current()->file_list)); elem = list_next(elem)){
 			if((item = list_entry(elem,struct list_item,elem))->fd == fd){
-				file_read_sema_down(item->f);	
+				file_read_sema_down(item->f);
 				r_size =  file_read(item->f,buffer,size);
 				file_read_sema_up(item->f);
 				return r_size;
@@ -295,4 +300,21 @@ void close(int fd){
 		}
 	}
 	return;
+}
+int is_valid_address(int* buffer)
+{
+	if(is_kernel_vaddr(buffer))
+		return 0;
+
+	struct spt_e find_element;
+
+	find_element.vaddr = pg_round_down((void*)buffer);
+
+	struct hash_elem *e = hash_find(&thread_current()->spt,&find_element.elem);
+	struct spt_e* found = hash_entry(e,struct spt_e,elem);
+
+	if(found == NULL)
+		return 0;
+	else
+		return 1;
 }

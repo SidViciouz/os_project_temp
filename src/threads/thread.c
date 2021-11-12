@@ -29,6 +29,7 @@ static struct list ready_list;
 static struct list blocked_list;
 
 static int load_avg;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -103,6 +104,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&blocked_list);
+  init_frame_list();
   load_avg = 0;
 
   /* Set up a thread structure for the running thread. */

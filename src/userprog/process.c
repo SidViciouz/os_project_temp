@@ -19,6 +19,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -65,6 +66,7 @@ start_process (void *file_name_)
 
   //thread_current()->spt  = malloc(sizeof(struct hash));
   hash_init(&thread_current()->spt,hash_value,hash_compare,NULL);
+  init_swap_bitmap();
   //hash_init(&(thread_current()->spt),hash_value,hash_compare,NULL);
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -504,7 +506,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           return false; 
         }
 */
-      struct spt_e *spte = (struct spte *)malloc(sizeof(struct spt_e));
+      add_spte(upage,page_read_bytes,page_zero_bytes,writable,file,ofs);
+      /*
+      struct spt_e *spte = (struct spte *)malloc(sizeof(struct spt_e)); //insert spte
       spte->vaddr = upage;
       spte->page_read_bytes = page_read_bytes;
       spte->page_zero_bytes = page_zero_bytes;
@@ -512,6 +516,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       spte->file = file;
       spte->ofs = ofs;
       hash_insert(&thread_current()->spt,&(spte->elem));
+	*/
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
@@ -539,13 +544,15 @@ setup_stack (void **esp)
         palloc_free_page (kpage);
     }
   //must be edited later
+  add_spte((uint8_t*)PHYS_BASE - PGSIZE,PGSIZE,0,true,NULL,0);
+  /*
   struct spt_e *spte = (struct spt_e*)malloc(sizeof(struct spt_e));
   spte->vaddr = (uint8_t*)PHYS_BASE - PGSIZE;
   spte->page_read_bytes = PGSIZE;
   spte->page_zero_bytes = 0;
   spte->writable = true;
   spte->file = NULL;
-  hash_insert(&thread_current()->spt,&(spte->elem));
+  hash_insert(&thread_current()->spt,&(spte->elem));*/
 
   return success;
 }

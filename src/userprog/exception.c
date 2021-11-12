@@ -9,6 +9,7 @@
 #include <hash.h>
 #include "threads/palloc.h"
 #include "devices/block.h"
+#include "vm/frame.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -161,7 +162,7 @@ page_fault (struct intr_frame *f)
   }
 
   if(not_present){
-	  	struct spt_e find_element;
+	  	  struct spt_e find_element;
 		  find_element.vaddr = pg_round_down(fault_addr);
 		  struct hash_elem *e = hash_find(&thread_current()->spt,&find_element.elem);
 		  if(e == NULL){
@@ -174,13 +175,30 @@ page_fault (struct intr_frame *f)
 				 exit(-1);
 			  
 			  //printf("to allocate : %u\n",number_of_page_to_allocate - number_of_page);
+			  uint8_t *vaddr = pg_round_down(fault_addr);
 			  for(int i=0; i<number_of_page_to_allocate - number_of_page; i++){
 				 uint8_t *page = palloc_get_page(PAL_USER);
 				 struct thread *t = thread_current();
-		  		 if(!call_install_page(pg_round_down(fault_addr),page,true)){ //writable need to edited
+		  		 if(!call_install_page(vaddr,page,true)){ //writable need to edited
 				 	palloc_free_page(page);
 			  		exit(-1);
 				 }
+				 else{
+      					add_spte(vaddr,PGSIZE,0,true,NULL,0);
+					struct spt_e find_e;
+		  			find_e.vaddr = vaddr;
+					struct hash_elem *e1 = hash_find(&thread_current()->spt,&find_e.elem);
+					if(e1 == NULL)
+						exit(-1);
+		  			struct spt_e* found1 = hash_entry(e1,struct spt_e,elem);
+
+      					struct frame_e *fe = (struct frame_e*)malloc(sizeof(struct frame_e));
+		      			fe->kaddr = pagedir_get_page(thread_current()->pagedir,found1->vaddr);
+ 					fe->t = thread_current();
+		  		      	fe->spte = found1;
+      					insert_frame_e(&fe->elem);
+				 }
+				 vaddr += PGSIZE;
 
 			  }
 			  return; 
@@ -192,12 +210,27 @@ page_fault (struct intr_frame *f)
 		  if(kpage == NULL){
 			  //memory full. i need to add swapping.
 			  //printf("kpage == NULL\n");
-			  if(block_get_role(BLOCK_SWAP) != NULL){
-				  printf("can use swap partition\n");
+			  struct block* b = block_get_role(BLOCK_SWAP);
+			  if(b == NULL){
+				  printf("can't use swap partition\n");
+			  	  exit(-1);
 			  }
-			  exit(-1);
+			  else{
+			  	 block_sector_t sizeofblock = block_size(b);
+				 //printf("%d %x\n",sizeofblock,sizeofblock);
+				 int empty_swap_slot_idx = find_swap_slot();
+				 if(empty_swap_slot_idx != -1){
+					//palloc_free_page();
+					//dirty bit에 따라 swap slot에 swap in하는거 추가해야함
+					free_frame();
+					return;
+				 }
+				 exit(-1);
+				 //return;
+			  }
 		  }
 		  struct spt_e* found = hash_entry(e,struct spt_e,elem);
+		  //swap in 되었던 거라면 새로 load하는 것이 아닌 swap out하는 부분 추가해야함.
 		  file_seek(found->file,found->ofs);
 		  if(file_read(found->file,kpage,found->page_read_bytes) != (int) found->page_read_bytes){
 			  palloc_free_page(kpage);
@@ -211,6 +244,13 @@ page_fault (struct intr_frame *f)
 			  palloc_free_page(kpage);
 			  //printf("install page error\n");
 			  exit(-1);
+		  }
+		  else{
+      			struct frame_e *fe = (struct frame_e*)malloc(sizeof(struct frame_e));
+      			fe->kaddr = pagedir_get_page(thread_current()->pagedir,found->vaddr);
+ 			fe->t = thread_current();
+  		      	fe->spte = found;
+      			insert_frame_e(&fe->elem);
 		  }
 	  return;
 	}
