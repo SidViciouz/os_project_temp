@@ -151,17 +151,18 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-
+/*
   if(!user){
 	  //printf("user fault\n");
+	  //printf("%x\n",fault_addr);
 	  exit(-1);
-  }
-  else if(is_kernel_vaddr(fault_addr)){
+  }*/
+  if(is_kernel_vaddr(fault_addr)){
 	  //printf("kernel address fault\n");
 	  exit(-1);
   }
 
-  if(not_present){
+  if(not_present){  //file을 읽는 중에 다시 읽으려고 하니 syn-write에서 에러가 발생함.
 	  	  struct spt_e find_element;
 		  find_element.vaddr = pg_round_down(fault_addr);
 		  struct hash_elem *e = hash_find(&thread_current()->spt,&find_element.elem);
@@ -254,9 +255,10 @@ page_fault (struct intr_frame *f)
 		  }
 	  return;
 	}
+  /*
   else if(write && user)
-	exit(-1);  
-
+	exit(-1);  */
+  exit(-1);
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
