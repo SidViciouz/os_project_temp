@@ -223,7 +223,7 @@ page_fault (struct intr_frame *f)
 				 if(empty_swap_slot_idx != -1){
 					//palloc_free_page();
 					//dirty bit에 따라 swap slot에 swap in하는거 추가해야함
-					free_frame();
+					free_frame(empty_swap_slot_idx);
 					return;
 				 }
 				 exit(-1);
@@ -231,7 +231,7 @@ page_fault (struct intr_frame *f)
 			  }
 		  }
 		  struct spt_e* found = hash_entry(e,struct spt_e,elem);
-		  //swap in 되었던 거라면 새로 load하는 것이 아닌 swap out하는 부분 추가해야함.
+		  
 		  file_seek(found->file,found->ofs);
 		  if(file_read(found->file,kpage,found->page_read_bytes) != (int) found->page_read_bytes){
 			  palloc_free_page(kpage);
@@ -247,6 +247,11 @@ page_fault (struct intr_frame *f)
 			  exit(-1);
 		  }
 		  else{
+		  	//swap in 되었던 거라면 새로 load하는 것이 아닌 swap out하는 부분
+			  if(found->swap_slot != -1){
+				found->swap_slot = -1;	
+				swap_to_addr(kpage);
+			  }
       			struct frame_e *fe = (struct frame_e*)malloc(sizeof(struct frame_e));
       			fe->kaddr = pagedir_get_page(thread_current()->pagedir,found->vaddr);
  			fe->t = thread_current();

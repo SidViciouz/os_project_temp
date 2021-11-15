@@ -11,6 +11,7 @@ struct spt_e{
 	struct file* file;
 	struct hash_elem elem;
 	size_t ofs;
+	int swap_slot;
 };
 
 unsigned hash_value(const struct hash_elem* e,void *aux);
