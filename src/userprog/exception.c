@@ -151,12 +151,28 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
+
+  struct thread *curr = thread_current();
+  void* fault_page = (void*)pg_round_down(fault_addr);
+
+  if(!not_present)
+	  goto PAGE_FAULT_VIOLATED_ACCESS;
+
+  void* esp = user ? f->esp : curr->current_esp;
+
+  bool on_stack_frame, is_stack_addr;
+  on_stack_frame = (esp <= fault_addr || fault_addr == f->esp -4 || fault_addr == f->esp -32);
+  is_stack_addr = (PHYS_BASE - 0x800000 <= fault_addr && fault_addr < PHYS_BASE);
+  if(on_stack_frame && is_stack_addr){
+	if(supt_has_entry(curr->supt,fault_page) == false)
+		supt_install_zeropage(curr->supt,fault_page);
+  }
+  if(!load_page(curr->supt,curr->pagedir,fault_page)){
+	  goto PAGE_FAULT_VIOLATED_ACCESS;
+  }
+
+  return;
 /*
-  if(!user){
-	  //printf("user fault\n");
-	  //printf("%x\n",fault_addr);
-	  exit(-1);
-  }*/
   if(is_kernel_vaddr(fault_addr)){
 	  //printf("kernel address fault\n");
 	  exit(-1);
@@ -260,13 +276,13 @@ page_fault (struct intr_frame *f)
 		  }
 	  return;
 	}
-  /*
-  else if(write && user)
-	exit(-1);  */
   exit(-1);
+  */
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
+PAGE_FAULT_VIOLATED_ACCESS:
+
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",

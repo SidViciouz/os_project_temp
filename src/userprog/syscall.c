@@ -17,11 +17,13 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
   int syscall_no = *(int*)(f->esp);
-/*
+
+  thread_current()->current_esp = f->esp;
+
   if(!is_user_vaddr(f->esp))
-	  exit(-1);*/
-  if(!is_valid_address(f->esp))
 	  exit(-1);
+ // if(!is_valid_address(f->esp))
+//	  exit(-1);
   if(syscall_no == SYS_HALT){
 	  halt();
   }
@@ -119,11 +121,11 @@ int wait(int pid){
 	return  process_wait(pid);
 }
 int read(int fd,int *buffer,unsigned size){
-	/*
+	
 	if(!is_user_vaddr(buffer))
-		exit(-1);*/
-	if(!is_valid_address(buffer))
 		exit(-1);
+	//if(!is_valid_address(buffer))
+	//	exit(-1);
 	//materialize user address validity check using spt
 	if(fd == 0){
 		for(int i=0; i<size; i++){
@@ -301,6 +303,7 @@ void close(int fd){
 	}
 	return;
 }
+/*
 int is_valid_address(int* buffer)
 {
 	if(is_kernel_vaddr(buffer))
@@ -317,4 +320,4 @@ int is_valid_address(int* buffer)
 		return 0;
 	else
 		return 1;
-}
+}*/

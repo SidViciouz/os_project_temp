@@ -132,7 +132,9 @@ struct thread
     int64_t recent_cpu;
 
     /*proj4*/
-    struct hash spt;
+    //struct hash spt;
+    struct supplemental_page_table *supt;
+    uint8_t *current_esp;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };

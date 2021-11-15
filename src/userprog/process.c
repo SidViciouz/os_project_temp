@@ -64,10 +64,9 @@ start_process (void *file_name_)
   struct list_elem* element;
   struct thread* temp;
 
-  //thread_current()->spt  = malloc(sizeof(struct hash));
-  hash_init(&thread_current()->spt,hash_value,hash_compare,NULL);
-  init_swap_bitmap();
-  //hash_init(&(thread_current()->spt),hash_value,hash_compare,NULL);
+  //hash_init(&thread_current()->spt,hash_value,hash_compare,NULL);
+  //init_swap_bitmap();
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -270,6 +269,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
+
+  //proj4
+  t->supt = supt_create();
+
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
@@ -506,22 +509,17 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           return false; 
         }
 */
-      add_spte(upage,page_read_bytes,page_zero_bytes,writable,file,ofs);
-      /*
-      struct spt_e *spte = (struct spte *)malloc(sizeof(struct spt_e)); //insert spte
-      spte->vaddr = upage;
-      spte->page_read_bytes = page_read_bytes;
-      spte->page_zero_bytes = page_zero_bytes;
-      spte->writable = writable;
-      spte->file = file;
-      spte->ofs = ofs;
-      hash_insert(&thread_current()->spt,&(spte->elem));
-	*/
+      //add_spte(upage,page_read_bytes,page_zero_bytes,writable,file,ofs);
+      struct thread *cur = thread_current();
+      ASSERT(pagedir_get_page(cur->pagedir,upage) == NULL);
+      if(!supt_install_filesys(cur->supt,upage,file,ofs,page_read_bytes,page_zero_bytes,writable)) return false;
+
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
-      ofs += page_read_bytes;
+      //ofs += page_read_bytes;
+      ofs += PGSIZE;
     }
   return true;
 }
@@ -534,17 +532,19 @@ setup_stack (void **esp)
   uint8_t *kpage;
   bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  //kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  kpage = frame_allocate(PAL_USER|PAL_ZERO,PHYS_BASE-PGSIZE);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
         *esp = PHYS_BASE;
       else
-        palloc_free_page (kpage);
+	frame_free(kpage);
+        //palloc_free_page (kpage);
     }
   //must be edited later
-  add_spte((uint8_t*)PHYS_BASE - PGSIZE,PGSIZE,0,true,NULL,0);
+  //add_spte((uint8_t*)PHYS_BASE - PGSIZE,PGSIZE,0,true,NULL,0);
   /*
   struct spt_e *spte = (struct spt_e*)malloc(sizeof(struct spt_e));
   spte->vaddr = (uint8_t*)PHYS_BASE - PGSIZE;
@@ -573,8 +573,16 @@ install_page (void *upage, void *kpage, bool writable)
 
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
+  /*
   return (pagedir_get_page (t->pagedir, upage) == NULL
+          && pagedir_set_page (t->pagedir, upage, kpage, writable));*/
+
+  bool success = (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+  success = success && supt_install_frame(t->supt,upage,kpage);
+  if(success) frame_unpin(kpage);
+
+  return success;
 }
 
 void push_argument(int argc, char* argv[], void** esp)
